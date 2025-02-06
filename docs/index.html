@@ -27,6 +27,10 @@
             background: #000; 
             display: block; 
         }
+        #nextPiece {
+            background: #000;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -49,13 +53,13 @@
         let board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
         
         const COLORS = {
-            I: "#00f0f0", // シアン
-            O: "#f0f000", // イエロー
-            S: "#00f000", // グリーン
-            Z: "#f00000", // レッド
-            L: "#f0a000", // オレンジ
-            J: "#0000f0", // ブルー
-            T: "#a000f0"  // パープル
+            I: "#00f0f0",
+            O: "#f0f000",
+            S: "#00f000",
+            Z: "#f00000",
+            L: "#f0a000",
+            J: "#0000f0",
+            T: "#a000f0"
         };
 
         const TETROMINOS = [
@@ -177,9 +181,25 @@
 
         function drawNextTetromino() {
             nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-            const offsetX = Math.floor((4 - nextTetromino.shape[0].length) / 2);
-            const offsetY = Math.floor((4 - nextTetromino.shape.length) / 2);
-            nextTetromino.draw(nextCtx, offsetX, offsetY);
+            
+            // ネクストミノの位置を計算
+            const nextPieceX = 1;  // 左端から1マス
+            const nextPieceY = 1;  // 上端から1マス
+            
+            // 一時的にx,yを保存
+            const originalX = nextTetromino.x;
+            const originalY = nextTetromino.y;
+            
+            // ネクストミノの位置を設定
+            nextTetromino.x = nextPieceX;
+            nextTetromino.y = nextPieceY;
+            
+            // 描画
+            nextTetromino.draw(nextCtx);
+            
+            // 元の位置を復元
+            nextTetromino.x = originalX;
+            nextTetromino.y = originalY;
         }
 
         let tetromino = new Tetromino();
@@ -192,7 +212,13 @@
             tetromino.draw();
         }
 
+        // キーイベントの処理
         document.addEventListener("keydown", (event) => {
+            // デフォルトのキー動作を防止
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.key)) {
+                event.preventDefault();
+            }
+            
             switch(event.key) {
                 case "ArrowDown":
                     tetromino.moveDown();
