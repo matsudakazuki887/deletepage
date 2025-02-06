@@ -26,16 +26,20 @@
         canvas { 
             background: #000; 
             display: block; 
+            margin-bottom: 10px;
         }
-        #nextPiece {
-            background: #000;
-            margin-top: 10px;
+        .side-area h2 {
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
     <h1>テトリス</h1>
     <div class="game-container">
+        <div class="side-area">
+            <h2>Hold</h2>
+            <canvas id="holdPiece" width="120" height="120"></canvas>
+        </div>
         <div class="main-area">
             <canvas id="tetris" width="300" height="600"></canvas>
         </div>
@@ -49,8 +53,12 @@
         const ctx = canvas.getContext("2d");
         const nextCanvas = document.getElementById("nextPiece");
         const nextCtx = nextCanvas.getContext("2d");
+        const holdCanvas = document.getElementById("holdPiece");
+        const holdCtx = holdCanvas.getContext("2d");
         const ROWS = 20, COLS = 10, SQ = 30;
         let board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
+        let canHold = true;
+        let holdPiece = null;
         
         const COLORS = {
             I: "#00f0f0",
@@ -71,7 +79,30 @@
             { shape: [[1, 1, 1], [0, 0, 1]], type: 'J' },
             { shape: [[1, 1, 1], [0, 1, 0]], type: 'T' }
         ];
-        
+
+        class TetrominoBag {
+            constructor() {
+                this.bag = [];
+                this.refillBag();
+            }
+
+            refillBag() {
+                this.bag = [...TETROMINOS];
+                // Fisher-Yatesシャッフル
+                for (let i = this.bag.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
+                }
+            }
+
+            next() {
+                if (this.bag.length === 0) {
+                    this.refillBag();
+                }
+                return this.bag.pop();
+            }
+        }
+
         function drawSquare(x, y, color, context) {
             context.fillStyle = color;
             context.fillRect(x * SQ, y * SQ, SQ, SQ);
@@ -89,9 +120,9 @@
                     this.shape = tetromino.shape;
                     this.type = tetromino.type;
                 } else {
-                    const randomTetromino = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
-                    this.shape = randomTetromino.shape;
-                    this.type = randomTetromino.type;
+                    const nextTetromino = tetrominoBag.next();
+                    this.shape = nextTetromino.shape;
+                    this.type = nextTetromino.type;
                 }
                 this.x = 3;
                 this.y = 0;
@@ -114,6 +145,7 @@
                 this.merge();
                 tetromino = new Tetromino(nextTetromino);
                 nextTetromino = new Tetromino();
+                canHold = true;
                 drawNextTetromino();
                 return false;
             }
@@ -170,6 +202,39 @@
                 });
                 checkLines();
             }
+
+            copy() {
+                return { shape: this.shape, type: this.type };
+            }
+        }
+
+        function holdTetromino() {
+            if (!canHold) return;
+            
+            const currentPiece = tetromino.copy();
+            if (holdPiece === null) {
+                holdPiece = currentPiece;
+                tetromino = new Tetromino(nextTetromino);
+                nextTetromino = new Tetromino();
+                drawNextTetromino();
+            } else {
+                const temp = holdPiece;
+                holdPiece = currentPiece;
+                tetromino = new Tetromino(temp);
+            }
+            
+            drawHoldPiece();
+            canHold = false;
+        }
+
+        function drawHoldPiece() {
+            holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+            if (holdPiece) {
+                const tempTetromino = new Tetromino(holdPiece);
+                tempTetromino.x = 1;
+                tempTetromino.y = 1;
+                tempTetromino.draw(holdCtx);
+            }
         }
 
         function checkLines() {
@@ -181,27 +246,16 @@
 
         function drawNextTetromino() {
             nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-            
-            // ネクストミノの位置を計算
-            const nextPieceX = 1;  // 左端から1マス
-            const nextPieceY = 1;  // 上端から1マス
-            
-            // 一時的にx,yを保存
-            const originalX = nextTetromino.x;
-            const originalY = nextTetromino.y;
-            
-            // ネクストミノの位置を設定
-            nextTetromino.x = nextPieceX;
-            nextTetromino.y = nextPieceY;
-            
-            // 描画
+            const tempX = nextTetromino.x;
+            const tempY = nextTetromino.y;
+            nextTetromino.x = 1;
+            nextTetromino.y = 1;
             nextTetromino.draw(nextCtx);
-            
-            // 元の位置を復元
-            nextTetromino.x = originalX;
-            nextTetromino.y = originalY;
+            nextTetromino.x = tempX;
+            nextTetromino.y = tempY;
         }
 
+        const tetrominoBag = new TetrominoBag();
         let tetromino = new Tetromino();
         let nextTetromino = new Tetromino();
         drawNextTetromino();
@@ -212,9 +266,7 @@
             tetromino.draw();
         }
 
-        // キーイベントの処理
         document.addEventListener("keydown", (event) => {
-            // デフォルトのキー動作を防止
             if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.key)) {
                 event.preventDefault();
             }
@@ -237,6 +289,9 @@
                     break;
                 case "z":
                     tetromino.rotateLeft();
+                    break;
+                case "c":
+                    holdTetromino();
                     break;
             }
             update();
