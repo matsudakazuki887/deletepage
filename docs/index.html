@@ -1,14 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentn</title>
+    <title>テトリス</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { background: #000; display: block; margin: auto; }
+    </style>
 </head>
-
 <body>
+    <h1>テトリス</h1>
+    <canvas id="tetris" width="300" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("tetris");
+        const ctx = canvas.getContext("2d");
+        const ROWS = 20, COLS = 10, SQ = 30;
+        const board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
 
+        function drawSquare(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * SQ, y * SQ, SQ, SQ);
+            ctx.strokeStyle = "#333";
+            ctx.strokeRect(x * SQ, y * SQ, SQ, SQ);
+        }
+
+        function drawBoard() {
+            board.forEach((row, y) => row.forEach((color, x) => drawSquare(x, y, color)));
+        }
+
+        drawBoard();
+    </script>
 </body>
-
 </html>
