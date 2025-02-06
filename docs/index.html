@@ -12,9 +12,13 @@
 <body>
     <h1>テトリス</h1>
     <canvas id="tetris" width="300" height="600"></canvas>
+    <h2>Next Piece</h2>
+    <canvas id="nextPiece" width="120" height="120"></canvas>
     <script>
         const canvas = document.getElementById("tetris");
         const ctx = canvas.getContext("2d");
+        const nextCanvas = document.getElementById("nextPiece");
+        const nextCtx = nextCanvas.getContext("2d");
         const ROWS = 20, COLS = 10, SQ = 30;
         let board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
         
@@ -28,20 +32,20 @@
             [[1, 1, 1], [0, 1, 0]]
         ];
         
-        function drawSquare(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x * SQ, y * SQ, SQ, SQ);
-            ctx.strokeStyle = "#333";
-            ctx.strokeRect(x * SQ, y * SQ, SQ, SQ);
+        function drawSquare(x, y, color, context) {
+            context.fillStyle = color;
+            context.fillRect(x * SQ, y * SQ, SQ, SQ);
+            context.strokeStyle = "#333";
+            context.strokeRect(x * SQ, y * SQ, SQ, SQ);
         }
 
         function drawBoard() {
-            board.forEach((row, y) => row.forEach((color, x) => drawSquare(x, y, color)));
+            board.forEach((row, y) => row.forEach((color, x) => drawSquare(x, y, color, ctx)));
         }
 
         class Tetromino {
-            constructor() {
-                this.shape = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
+            constructor(shape) {
+                this.shape = shape || TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
                 this.x = 3;
                 this.y = 0;
                 this.color = "red";
@@ -50,7 +54,7 @@
             draw() {
                 this.shape.forEach((row, dy) => {
                     row.forEach((cell, dx) => {
-                        if (cell) drawSquare(this.x + dx, this.y + dy, this.color);
+                        if (cell) drawSquare(this.x + dx, this.y + dy, this.color, ctx);
                     });
                 });
             }
@@ -60,7 +64,9 @@
                     this.y++;
                 } else {
                     this.merge();
-                    tetromino = new Tetromino();
+                    tetromino = new Tetromino(nextTetromino.shape);
+                    nextTetromino = new Tetromino();
+                    drawNextTetromino();
                 }
             }
 
@@ -72,8 +78,13 @@
                 if (!this.collision(1, 0)) this.x++;
             }
 
-            rotate() {
+            rotateRight() {
                 const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
+                if (!this.collision(0, 0, newShape)) this.shape = newShape;
+            }
+
+            rotateLeft() {
+                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).map(row => row.reverse());
                 if (!this.collision(0, 0, newShape)) this.shape = newShape;
             }
 
@@ -100,7 +111,19 @@
             while (board.length < ROWS) board.unshift(Array(COLS).fill("black"));
         }
 
+        function drawNextTetromino() {
+            nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+            nextTetromino.shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) drawSquare(x + 1, y + 1, "red", nextCtx);
+                });
+            });
+        }
+
         let tetromino = new Tetromino();
+        let nextTetromino = new Tetromino();
+        drawNextTetromino();
+
         function update() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawBoard();
@@ -111,7 +134,8 @@
             if (event.key === "ArrowDown") tetromino.moveDown();
             if (event.key === "ArrowLeft") tetromino.moveLeft();
             if (event.key === "ArrowRight") tetromino.moveRight();
-            if (event.key === "ArrowUp") tetromino.rotate();
+            if (event.key === "x") tetromino.rotateRight();
+            if (event.key === "z") tetromino.rotateLeft();
             update();
         });
 
