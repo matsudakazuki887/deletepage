@@ -17,7 +17,17 @@
         const ctx = canvas.getContext("2d");
         const ROWS = 20, COLS = 10, SQ = 30;
         const board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
-
+        
+        const TETROMINOS = [
+            [[1, 1, 1, 1]],
+            [[1, 1], [1, 1]],
+            [[0, 1, 1], [1, 1, 0]],
+            [[1, 1, 0], [0, 1, 1]],
+            [[1, 1, 1], [1, 0, 0]],
+            [[1, 1, 1], [0, 0, 1]],
+            [[1, 1, 1], [0, 1, 0]]
+        ];
+        
         function drawSquare(x, y, color) {
             ctx.fillStyle = color;
             ctx.fillRect(x * SQ, y * SQ, SQ, SQ);
@@ -31,12 +41,9 @@
 
         class Tetromino {
             constructor() {
+                this.shape = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
                 this.x = 3;
                 this.y = 0;
-                this.shape = [
-                    [1, 1, 1],
-                    [0, 1, 0]
-                ];
                 this.color = "red";
             }
 
@@ -46,6 +53,11 @@
                         if (cell) drawSquare(this.x + dx, this.y + dy, this.color);
                     });
                 });
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
+                this.shape = newShape;
             }
 
             moveDown() {
@@ -72,6 +84,7 @@
             if (event.key === "ArrowDown") tetromino.moveDown();
             if (event.key === "ArrowLeft") tetromino.moveLeft();
             if (event.key === "ArrowRight") tetromino.moveRight();
+            if (event.key === "ArrowUp") tetromino.rotate();
             update();
         });
 
