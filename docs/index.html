@@ -16,7 +16,7 @@
         const canvas = document.getElementById("tetris");
         const ctx = canvas.getContext("2d");
         const ROWS = 20, COLS = 10, SQ = 30;
-        const board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
         
         const TETROMINOS = [
             [[1, 1, 1, 1]],
@@ -55,22 +55,49 @@
                 });
             }
 
-            rotate() {
-                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
-                this.shape = newShape;
-            }
-
             moveDown() {
-                this.y++;
+                if (!this.collision(0, 1)) {
+                    this.y++;
+                } else {
+                    this.merge();
+                    tetromino = new Tetromino();
+                }
             }
 
             moveLeft() {
-                this.x--;
+                if (!this.collision(-1, 0)) this.x--;
             }
 
             moveRight() {
-                this.x++;
+                if (!this.collision(1, 0)) this.x++;
             }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
+                if (!this.collision(0, 0, newShape)) this.shape = newShape;
+            }
+
+            collision(dx, dy, newShape = this.shape) {
+                return newShape.some((row, y) => 
+                    row.some((cell, x) => 
+                        cell && (this.x + x + dx < 0 || this.x + x + dx >= COLS || this.y + y + dy >= ROWS || board[this.y + y + dy][this.x + x + dx] !== "black")
+                    )
+                );
+            }
+
+            merge() {
+                this.shape.forEach((row, y) => {
+                    row.forEach((cell, x) => {
+                        if (cell) board[this.y + y][this.x + x] = this.color;
+                    });
+                });
+                checkLines();
+            }
+        }
+
+        function checkLines() {
+            board = board.filter(row => row.some(cell => cell === "black"));
+            while (board.length < ROWS) board.unshift(Array(COLS).fill("black"));
         }
 
         let tetromino = new Tetromino();
@@ -88,7 +115,10 @@
             update();
         });
 
-        update();
+        setInterval(() => {
+            tetromino.moveDown();
+            update();
+        }, 500);
     </script>
 </body>
 </html>
