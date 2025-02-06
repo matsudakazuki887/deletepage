@@ -29,7 +29,53 @@
             board.forEach((row, y) => row.forEach((color, x) => drawSquare(x, y, color)));
         }
 
-        drawBoard();
+        class Tetromino {
+            constructor() {
+                this.x = 3;
+                this.y = 0;
+                this.shape = [
+                    [1, 1, 1],
+                    [0, 1, 0]
+                ];
+                this.color = "red";
+            }
+
+            draw() {
+                this.shape.forEach((row, dy) => {
+                    row.forEach((cell, dx) => {
+                        if (cell) drawSquare(this.x + dx, this.y + dy, this.color);
+                    });
+                });
+            }
+
+            moveDown() {
+                this.y++;
+            }
+
+            moveLeft() {
+                this.x--;
+            }
+
+            moveRight() {
+                this.x++;
+            }
+        }
+
+        let tetromino = new Tetromino();
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBoard();
+            tetromino.draw();
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown") tetromino.moveDown();
+            if (event.key === "ArrowLeft") tetromino.moveLeft();
+            if (event.key === "ArrowRight") tetromino.moveRight();
+            update();
+        });
+
+        update();
     </script>
 </body>
 </html>
