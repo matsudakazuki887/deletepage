@@ -5,15 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>テトリス</title>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; }
-        canvas { background: #000; display: block; margin: auto; }
+        body { 
+            text-align: center; 
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .game-container {
+            display: inline-flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin: 20px;
+        }
+        .main-area {
+            display: inline-block;
+        }
+        .side-area {
+            display: inline-block;
+            text-align: left;
+        }
+        canvas { 
+            background: #000; 
+            display: block; 
+        }
     </style>
 </head>
 <body>
     <h1>テトリス</h1>
-    <canvas id="tetris" width="300" height="600"></canvas>
-    <h2>Next Piece</h2>
-    <canvas id="nextPiece" width="120" height="120"></canvas>
+    <div class="game-container">
+        <div class="main-area">
+            <canvas id="tetris" width="300" height="600"></canvas>
+        </div>
+        <div class="side-area">
+            <h2>Next</h2>
+            <canvas id="nextPiece" width="120" height="120"></canvas>
+        </div>
+    </div>
     <script>
         const canvas = document.getElementById("tetris");
         const ctx = canvas.getContext("2d");
@@ -22,14 +48,24 @@
         const ROWS = 20, COLS = 10, SQ = 30;
         let board = Array.from({ length: ROWS }, () => Array(COLS).fill("black"));
         
+        const COLORS = {
+            I: "#00f0f0", // シアン
+            O: "#f0f000", // イエロー
+            S: "#00f000", // グリーン
+            Z: "#f00000", // レッド
+            L: "#f0a000", // オレンジ
+            J: "#0000f0", // ブルー
+            T: "#a000f0"  // パープル
+        };
+
         const TETROMINOS = [
-            [[1, 1, 1, 1]],
-            [[1, 1], [1, 1]],
-            [[0, 1, 1], [1, 1, 0]],
-            [[1, 1, 0], [0, 1, 1]],
-            [[1, 1, 1], [1, 0, 0]],
-            [[1, 1, 1], [0, 0, 1]],
-            [[1, 1, 1], [0, 1, 0]]
+            { shape: [[1, 1, 1, 1]], type: 'I' },
+            { shape: [[1, 1], [1, 1]], type: 'O' },
+            { shape: [[0, 1, 1], [1, 1, 0]], type: 'S' },
+            { shape: [[1, 1, 0], [0, 1, 1]], type: 'Z' },
+            { shape: [[1, 1, 1], [1, 0, 0]], type: 'L' },
+            { shape: [[1, 1, 1], [0, 0, 1]], type: 'J' },
+            { shape: [[1, 1, 1], [0, 1, 0]], type: 'T' }
         ];
         
         function drawSquare(x, y, color, context) {
@@ -44,17 +80,24 @@
         }
 
         class Tetromino {
-            constructor(shape) {
-                this.shape = shape || TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
+            constructor(tetromino) {
+                if (tetromino) {
+                    this.shape = tetromino.shape;
+                    this.type = tetromino.type;
+                } else {
+                    const randomTetromino = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
+                    this.shape = randomTetromino.shape;
+                    this.type = randomTetromino.type;
+                }
                 this.x = 3;
                 this.y = 0;
-                this.color = "red";
+                this.color = COLORS[this.type];
             }
 
-            draw() {
+            draw(context = ctx, offsetX = 0, offsetY = 0) {
                 this.shape.forEach((row, dy) => {
                     row.forEach((cell, dx) => {
-                        if (cell) drawSquare(this.x + dx, this.y + dy, this.color, ctx);
+                        if (cell) drawSquare(this.x + dx + offsetX, this.y + dy + offsetY, this.color, context);
                     });
                 });
             }
@@ -62,12 +105,17 @@
             moveDown() {
                 if (!this.collision(0, 1)) {
                     this.y++;
-                } else {
-                    this.merge();
-                    tetromino = new Tetromino(nextTetromino.shape);
-                    nextTetromino = new Tetromino();
-                    drawNextTetromino();
+                    return true;
                 }
+                this.merge();
+                tetromino = new Tetromino(nextTetromino);
+                nextTetromino = new Tetromino();
+                drawNextTetromino();
+                return false;
+            }
+
+            hardDrop() {
+                while (this.moveDown()) {}
             }
 
             moveLeft() {
@@ -79,27 +127,41 @@
             }
 
             rotateRight() {
-                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
+                const newShape = this.shape[0].map((_, i) => 
+                    this.shape.map(row => row[i]).reverse()
+                );
                 if (!this.collision(0, 0, newShape)) this.shape = newShape;
             }
 
             rotateLeft() {
-                const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).map(row => row.reverse());
+                const newShape = this.shape[0].map((_, i) => 
+                    this.shape.map(row => row[i]).map(row => row.reverse())
+                );
                 if (!this.collision(0, 0, newShape)) this.shape = newShape;
             }
 
             collision(dx, dy, newShape = this.shape) {
                 return newShape.some((row, y) => 
-                    row.some((cell, x) => 
-                        cell && (this.x + x + dx < 0 || this.x + x + dx >= COLS || this.y + y + dy >= ROWS || board[this.y + y + dy][this.x + x + dx] !== "black")
-                    )
+                    row.some((cell, x) => {
+                        if (!cell) return false;
+                        const newX = this.x + x + dx;
+                        const newY = this.y + y + dy;
+                        return (
+                            newX < 0 || 
+                            newX >= COLS || 
+                            newY >= ROWS || 
+                            (newY >= 0 && board[newY][newX] !== "black")
+                        );
+                    })
                 );
             }
 
             merge() {
                 this.shape.forEach((row, y) => {
                     row.forEach((cell, x) => {
-                        if (cell) board[this.y + y][this.x + x] = this.color;
+                        if (cell && this.y + y >= 0) {
+                            board[this.y + y][this.x + x] = this.color;
+                        }
                     });
                 });
                 checkLines();
@@ -108,16 +170,16 @@
 
         function checkLines() {
             board = board.filter(row => row.some(cell => cell === "black"));
-            while (board.length < ROWS) board.unshift(Array(COLS).fill("black"));
+            while (board.length < ROWS) {
+                board.unshift(Array(COLS).fill("black"));
+            }
         }
 
         function drawNextTetromino() {
             nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-            nextTetromino.shape.forEach((row, y) => {
-                row.forEach((cell, x) => {
-                    if (cell) drawSquare(x + 1, y + 1, "red", nextCtx);
-                });
-            });
+            const offsetX = Math.floor((4 - nextTetromino.shape[0].length) / 2);
+            const offsetY = Math.floor((4 - nextTetromino.shape.length) / 2);
+            nextTetromino.draw(nextCtx, offsetX, offsetY);
         }
 
         let tetromino = new Tetromino();
@@ -131,11 +193,26 @@
         }
 
         document.addEventListener("keydown", (event) => {
-            if (event.key === "ArrowDown") tetromino.moveDown();
-            if (event.key === "ArrowLeft") tetromino.moveLeft();
-            if (event.key === "ArrowRight") tetromino.moveRight();
-            if (event.key === "x") tetromino.rotateRight();
-            if (event.key === "z") tetromino.rotateLeft();
+            switch(event.key) {
+                case "ArrowDown":
+                    tetromino.moveDown();
+                    break;
+                case "ArrowLeft":
+                    tetromino.moveLeft();
+                    break;
+                case "ArrowRight":
+                    tetromino.moveRight();
+                    break;
+                case "ArrowUp":
+                    tetromino.hardDrop();
+                    break;
+                case "x":
+                    tetromino.rotateRight();
+                    break;
+                case "z":
+                    tetromino.rotateLeft();
+                    break;
+            }
             update();
         });
 
