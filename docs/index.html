@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>移動矢印、右回転x、左回転z、holdc</title>
+    <title>テトリス</title>
     <style>
         body { 
             text-align: center; 
@@ -163,24 +163,16 @@
             }
 
             rotateRight() {
-                const newShape = [];
-                for (let i = 0; i < this.shape[0].length; i++) {
-                    newShape[i] = [];
-                    for (let j = this.shape.length - 1; j >= 0; j--) {
-                        newShape[i].push(this.shape[j][i]);
-                    }
-                }
+                const newShape = this.shape[0].map((_, i) => 
+                    this.shape.map(row => row[i]).reverse()
+                );
                 if (!this.collision(0, 0, newShape)) this.shape = newShape;
             }
 
             rotateLeft() {
-                const newShape = [];
-                for (let i = 0; i < this.shape[0].length; i++) {
-                    newShape[i] = [];
-                    for (let j = 0; j < this.shape.length; j++) {
-                        newShape[i].push(this.shape[j][this.shape[0].length - 1 - i]);
-                    }
-                }
+                const newShape = this.shape[0].map((_, i) => 
+                    this.shape.map(row => row[i]).map(row => row.reverse())
+                );
                 if (!this.collision(0, 0, newShape)) this.shape = newShape;
             }
 
@@ -289,11 +281,10 @@
                 case "ArrowRight":
                     tetromino.moveRight();
                     break;
-                case " ": // スペースキー
+                case "ArrowUp":
                     tetromino.hardDrop();
                     break;
                 case "x":
-                case "ArrowUp":
                     tetromino.rotateRight();
                     break;
                 case "z":
